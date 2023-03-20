@@ -68,7 +68,7 @@ public class CaptchaFilter implements Filter {
 
         try {
 
-            if (!CaptchaDataHolder.getInstance().isReCaptchaEnabled()) {
+            if (!CaptchaDataHolder.getInstance().isReCaptchaEnabled() || !CaptchaDataHolder.getInstance().isHCaptchaEnabled() ) {
                 filterChain.doFilter(servletRequest, servletResponse);
                 return;
             }
@@ -80,7 +80,10 @@ public class CaptchaFilter implements Filter {
 
                 if (StringUtils.isNotBlank(currentPath) &&
                         CaptchaUtil.isPathAvailable(currentPath, CaptchaDataHolder.getInstance()
-                                .getReCaptchaRequestWrapUrls())) {
+                                .getReCaptchaRequestWrapUrls())
+                        || StringUtils.isNotBlank(currentPath) &&
+                        CaptchaUtil.isPathAvailable(currentPath, CaptchaDataHolder.getInstance()
+                                .getHCaptchaRequestWrapUrls()) ) {
                     servletRequest = new CaptchaHttpServletRequestWrapper((HttpServletRequest) servletRequest);
                 }
             }
@@ -204,3 +207,4 @@ public class CaptchaFilter implements Filter {
         }
     }
 }
+

@@ -29,5 +29,6 @@
     <bean class="org.wso2.carbon.identity.recovery.endpoint.impl.SetPasswordApiServiceImpl"/>
     <bean class="org.wso2.carbon.identity.recovery.endpoint.impl.ValidateAnswerApiServiceImpl"/>
     <bean class="org.wso2.carbon.identity.recovery.endpoint.impl.ValidateCodeApiServiceImpl"/>
+    <bean class="org.wso2.carbon.identity.recovery.endpoint.impl.HcaptchaApiServiceImpl"/>
 
 </beans>

@@ -52,6 +52,24 @@ public class CaptchaDataHolder {
     // Threshold for score in reCAPTCHA v3.
     private double reCaptchaScoreThreshold;
 
+    // hcaptcha variables
+    private boolean hCaptchaEnabled;
+
+    private String hCaptchaAPIUrl;
+
+    private String hCaptchaVerifyUrl;
+
+    private String hCaptchaSiteKey;
+
+    private String hCaptchaSecretKey;
+
+    private String hCaptchaErrorRedirectUrls;
+
+    private String hCaptchaRequestWrapUrls;
+
+    // Threshold for score in reCAPTCHA v3.
+    private double hCaptchaScoreThreshold;
+
     private IdentityGovernanceService identityGovernanceService;
 
     private RealmService realmService;
@@ -67,6 +85,15 @@ public class CaptchaDataHolder {
     private Map<String, String> passwordRecoveryReCaptchaConnectorPropertyMap = new HashMap<>();
 
     private boolean forcefullyEnabledRecaptchaForAllTenants;
+
+    // for hcaptcha
+    private Map<String, String> ssoLoginHCaptchaConnectorPropertyMap = new HashMap<>();
+
+    private Map<String, String> pathBasedHCaptchaConnectorPropertyMap = new HashMap<>();
+
+    private Map<String, String> passwordRecoveryHCaptchaConnectorPropertyMap = new HashMap<>();
+
+    private boolean forcefullyEnabledHcaptchaForAllTenants;
 
     private CaptchaDataHolder() {
 
@@ -142,6 +169,72 @@ public class CaptchaDataHolder {
         this.reCaptchaErrorRedirectUrls = reCaptchaErrorRedirectUrls;
     }
 
+    public boolean isHCaptchaEnabled() {
+        return hCaptchaEnabled;
+    }
+
+    public void setHCaptchaEnabled(boolean hCaptchaEnabled) {
+        this.hCaptchaEnabled = hCaptchaEnabled;
+    }
+
+    public String getHCaptchaAPIUrl() {
+        return hCaptchaAPIUrl;
+    }
+
+    public void setHCaptchaAPIUrl(String hCaptchaAPIUrl) {
+        this.hCaptchaAPIUrl = hCaptchaAPIUrl;
+    }
+
+    public String getHCaptchaVerifyUrl() {
+        return hCaptchaVerifyUrl;
+    }
+
+    public void setHCaptchaVerifyUrl(String hCaptchaVerifyUrl) {
+        this.hCaptchaVerifyUrl = hCaptchaVerifyUrl;
+    }
+
+    public String getHCaptchaSiteKey() {
+        return hCaptchaSiteKey;
+    }
+
+    public void setHCaptchaSiteKey(String hCaptchaSiteKey) {
+        this.hCaptchaSiteKey = hCaptchaSiteKey;
+    }
+
+    public String getHCaptchaSecretKey() {
+        return hCaptchaSecretKey;
+    }
+
+    public void setHCaptchaSecretKey(String hCaptchaSecretKey) {
+        this.hCaptchaSecretKey = hCaptchaSecretKey;
+    }
+
+    public String getHCaptchaRequestWrapUrls() {
+        return hCaptchaRequestWrapUrls;
+    }
+
+    public void setHCaptchaRequestWrapUrls(String hCaptchaRequestWrapUrls) {
+        this.hCaptchaRequestWrapUrls = hCaptchaRequestWrapUrls;
+    }
+
+    public double getHCaptchaScoreThreshold() {
+
+        return hCaptchaScoreThreshold;
+    }
+
+    public void setHCaptchaScoreThreshold(double hCaptchaScoreThreshold) {
+
+        this.hCaptchaScoreThreshold = hCaptchaScoreThreshold;
+    }
+
+    public String getHCaptchaErrorRedirectUrls() {
+        return hCaptchaErrorRedirectUrls;
+    }
+
+    public void setHCaptchaErrorRedirectUrls(String hCaptchaErrorRedirectUrls) {
+        this.hCaptchaErrorRedirectUrls = hCaptchaErrorRedirectUrls;
+    }
+
     public IdentityGovernanceService getIdentityGovernanceService() {
         return identityGovernanceService;
     }
@@ -173,6 +266,36 @@ public class CaptchaDataHolder {
     public void setPasswordRecoveryReCaptchaConnectorPropertyMap(
             Map<String, String> passwordRecoveryReCaptchaConnectorPropertyMap) {
         this.passwordRecoveryReCaptchaConnectorPropertyMap = passwordRecoveryReCaptchaConnectorPropertyMap;
+    }
+
+    public Map<String, String> getSsoLoginHCaptchaConnectorPropertyMap() {
+
+        return ssoLoginHCaptchaConnectorPropertyMap;
+    }
+
+    public void setSsoLoginHCaptchaConnectorPropertyMap(Map<String, String> ssoLoginHCaptchaConnectorPropertyMap) {
+
+        this.ssoLoginHCaptchaConnectorPropertyMap = ssoLoginHCaptchaConnectorPropertyMap;
+    }
+
+    public Map<String, String> getPathBasedHCaptchaConnectorPropertyMap() {
+
+        return pathBasedHCaptchaConnectorPropertyMap;
+    }
+
+    public void setPathBasedHCaptchaConnectorPropertyMap(Map<String, String> pathBasedHCaptchaConnectorPropertyMap) {
+
+        this.pathBasedHCaptchaConnectorPropertyMap = pathBasedHCaptchaConnectorPropertyMap;
+    }
+
+    public Map<String, String> getPasswordRecoveryHCaptchaConnectorPropertyMap() {
+
+        return passwordRecoveryHCaptchaConnectorPropertyMap;
+    }
+
+    public void setPasswordRecoveryHCaptchaConnectorPropertyMap(Map<String, String> passwordRecoveryHCaptchaConnectorPropertyMap) {
+
+        this.passwordRecoveryHCaptchaConnectorPropertyMap = passwordRecoveryHCaptchaConnectorPropertyMap;
     }
 
     public List<CaptchaConnector> getCaptchaConnectors() {
@@ -211,4 +334,15 @@ public class CaptchaDataHolder {
 
         this.forcefullyEnabledRecaptchaForAllTenants = forcefullyEnabledRecaptchaForAllTenants;
     }
+
+    public boolean isForcefullyEnabledHcaptchaForAllTenants() {
+
+        return forcefullyEnabledHcaptchaForAllTenants;
+    }
+
+    public void setForcefullyEnabledHcaptchaForAllTenants(boolean forcefullyEnabledHcaptchaForAllTenants) {
+
+        this.forcefullyEnabledHcaptchaForAllTenants = forcefullyEnabledHcaptchaForAllTenants;
+    }
 }
+

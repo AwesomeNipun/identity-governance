@@ -56,6 +56,8 @@ public class CaptchaComponent {
         try {
             // Initialize reCaptcha.
             CaptchaUtil.buildReCaptchaFilterProperties();
+            // Initialize hCaptcha
+            CaptchaUtil.buildHCaptchaFilterProperties();
             // Initialize and register SSOLoginReCaptchaConfig.
             IdentityConnectorConfig connector = new SSOLoginReCaptchaConfig();
             ((SSOLoginReCaptchaConfig) connector).init(CaptchaDataHolder.getInstance().getIdentityGovernanceService());

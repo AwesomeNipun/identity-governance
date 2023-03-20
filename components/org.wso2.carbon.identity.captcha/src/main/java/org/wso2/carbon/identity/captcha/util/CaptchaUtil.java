@@ -35,6 +35,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
+import org.opensaml.storage.annotation.Value;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authentication.framework.config.ConfigurationFacade;
@@ -77,6 +78,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import javax.servlet.ServletRequest;
+
 
 import static org.wso2.carbon.identity.captcha.util.CaptchaConstants.BASIC_AUTH_MECHANISM;
 import static org.wso2.carbon.identity.captcha.util.CaptchaConstants.ReCaptchaConnectorPropertySuffixes;
@@ -124,6 +126,46 @@ public class CaptchaUtil {
         }
 
     }
+
+    public static void buildHCaptchaFilterProperties() {
+
+        Path path = Paths.get(getCarbonHomeDirectory().toString(), "repository",
+                "conf", "identity", CaptchaConstants.CAPTCHA_CONFIG_FILE_NAME);
+
+        if (Files.exists(path)) {
+            Properties properties = new Properties();
+            try (Reader in = new InputStreamReader(Files.newInputStream(path), StandardCharsets.UTF_8)) {
+                properties.load(in);
+            } catch (IOException e) {
+                throw new RuntimeException("Error while loading '" + CaptchaConstants
+                        .CAPTCHA_CONFIG_FILE_NAME + "' configuration file", e);
+            }
+
+            boolean hCaptchaEnabled = Boolean.parseBoolean(properties.getProperty(CaptchaConstants
+                    .H_CAPTCHA_ENABLED));
+
+            String hCaptchaFailedRedirectUrls = properties.getProperty(CaptchaConstants.
+                    H_CAPTCHA_FAILED_REDIRECT_URLS);
+            if (StringUtils.isNotBlank(hCaptchaFailedRedirectUrls)) {
+                CaptchaDataHolder.getInstance().setHCaptchaErrorRedirectUrls(hCaptchaFailedRedirectUrls);
+            }
+
+            if (hCaptchaEnabled) {
+                CaptchaDataHolder.getInstance().setHCaptchaEnabled(true);
+                resolveSecrets(properties);
+                setHCaptchaConfigs(properties);
+                //setSSOLoginConnectorConfigs(properties);
+                //setPathBasedConnectorConfigs(properties);
+            } else {
+                CaptchaDataHolder.getInstance().setHCaptchaEnabled(false);
+
+            }
+        }
+
+    }
+
+
+
 
     public static Path getCarbonHomeDirectory() {
 
@@ -326,6 +368,66 @@ public class CaptchaUtil {
         return true;
     }
 
+    public static boolean isValidHCaptcha(String hCaptchaResponse) throws CaptchaException {
+
+        CloseableHttpClient httpclient = HttpClientBuilder.create().useSystemProperties().build();
+        HttpPost httppost = new HttpPost(CaptchaDataHolder.getInstance().getHCaptchaVerifyUrl());
+        final double scoreThreshold = CaptchaDataHolder.getInstance().getHCaptchaScoreThreshold();
+
+        List<BasicNameValuePair> params = Arrays.asList(new BasicNameValuePair("secret", CaptchaDataHolder
+                .getInstance().getHCaptchaSecretKey()), new BasicNameValuePair("response", hCaptchaResponse));
+        httppost.setEntity(new UrlEncodedFormEntity(params, StandardCharsets.UTF_8));
+
+        HttpResponse response;
+        try {
+            response = httpclient.execute(httppost);
+        } catch (IOException e) {
+            throw new CaptchaServerException("Unable to get the verification response.", e);
+        }
+
+        HttpEntity entity = response.getEntity();
+        if (entity == null) {
+            throw new CaptchaServerException("hCaptcha verification response is not received.");
+        }
+
+        try {
+            try (InputStream in = entity.getContent()) {
+                JsonObject verificationResponse = new JsonParser().parse(IOUtils.toString(in)).getAsJsonObject();
+                if (verificationResponse == null) {
+                    throw new CaptchaClientException("Error receiving hCaptcha response from the server");
+                }
+                boolean success = verificationResponse.get(CaptchaConstants.CAPTCHA_SUCCESS) != null
+                        && verificationResponse.get(CaptchaConstants.CAPTCHA_SUCCESS).getAsBoolean();
+                // Whether this request was a valid reCAPTCHA token.
+                if (!success) {
+                    throw new CaptchaClientException("hCaptcha token is invalid. Error:" +
+                            verificationResponse.get("error-codes"));
+                }
+                if (verificationResponse.get(CaptchaConstants.CAPTCHA_SCORE) != null) {
+                    double score = verificationResponse.get(CaptchaConstants.CAPTCHA_SCORE).getAsDouble();
+                    // reCAPTCHA v3 response contains score
+                    if (log.isDebugEnabled()) {
+                        log.debug("hcaptcha response { timestamp:" +
+                                verificationResponse.get("challenge_ts") + ", action: " +
+                                verificationResponse.get("action") + ", score: " + score + " }");
+                    }
+                    if (score >= scoreThreshold) {
+                        throw new CaptchaClientException("hCaptcha score is greater than the threshold.");
+                    }
+                } else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("hcaptcha response { timestamp:" +
+                                verificationResponse.get("challenge_ts") + " }");
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new CaptchaServerException("Unable to read the verification response.", e);
+        }
+
+        return true;
+    }
+
     public static boolean isMaximumFailedLoginAttemptsReached(String usernameWithDomain, String tenantDomain) throws
             CaptchaException {
 
@@ -403,7 +505,7 @@ public class CaptchaUtil {
                 return false;
             }
             claimValues = userStoreManager.getUserClaimValues(MultitenantUtils
-                    .getTenantAwareUsername(usernameWithDomain),
+                            .getTenantAwareUsername(usernameWithDomain),
                     new String[]{RECAPTCHA_VERIFICATION_CLAIM}, UserCoreConstants.DEFAULT_PROFILE);
         } catch (org.wso2.carbon.user.core.UserStoreException e) {
             if (log.isDebugEnabled()) {
@@ -430,7 +532,7 @@ public class CaptchaUtil {
      * @throws org.wso2.carbon.user.core.UserStoreException Error while checking the user's existence in the given user store.
      */
     private static UserStoreManager getUserStoreManagerForUser(String userName,
-           UserStoreManager userStoreManager) throws org.wso2.carbon.user.core.UserStoreException {
+                                                               UserStoreManager userStoreManager) throws org.wso2.carbon.user.core.UserStoreException {
 
         UserStoreManager userStore = userStoreManager;
         while (userStore != null) {
@@ -487,6 +589,51 @@ public class CaptchaUtil {
                 Boolean.parseBoolean(forcefullyEnableRecaptchaForAllTenants));
     }
 
+    private static void setHCaptchaConfigs(Properties properties) {
+
+        String hCaptchaAPIUrl = properties.getProperty(CaptchaConstants.H_CAPTCHA_API_URL);
+        if (StringUtils.isBlank(hCaptchaAPIUrl)) {
+            throw new RuntimeException(getValidationErrorMessage(CaptchaConstants.H_CAPTCHA_API_URL));
+        }
+        CaptchaDataHolder.getInstance().setReCaptchaAPIUrl(hCaptchaAPIUrl);
+
+        String hCaptchaVerifyUrl = properties.getProperty(CaptchaConstants.H_CAPTCHA_VERIFY_URL);
+        if (StringUtils.isBlank(hCaptchaVerifyUrl)) {
+            throw new RuntimeException(getValidationErrorMessage(CaptchaConstants.H_CAPTCHA_VERIFY_URL));
+        }
+        CaptchaDataHolder.getInstance().setReCaptchaVerifyUrl(hCaptchaVerifyUrl);
+
+        String hCaptchaSiteKey = properties.getProperty(CaptchaConstants.H_CAPTCHA_SITE_KEY);
+        if (StringUtils.isBlank(hCaptchaSiteKey)) {
+            throw new RuntimeException(getValidationErrorMessage(CaptchaConstants.H_CAPTCHA_SITE_KEY));
+        }
+        CaptchaDataHolder.getInstance().setHCaptchaSiteKey(hCaptchaSiteKey);
+
+        String hCaptchaSecretKey = properties.getProperty(CaptchaConstants.H_CAPTCHA_SECRET_KEY);
+        if (StringUtils.isBlank(hCaptchaSecretKey)) {
+            throw new RuntimeException(getValidationErrorMessage(CaptchaConstants.H_CAPTCHA_SECRET_KEY));
+        }
+        CaptchaDataHolder.getInstance().setHCaptchaSecretKey(hCaptchaSecretKey);
+
+        String hCaptchaRequestWrapUrls = properties.getProperty(CaptchaConstants.H_CAPTCHA_REQUEST_WRAP_URLS);
+        if (hCaptchaRequestWrapUrls == null) {
+            throw new RuntimeException(getValidationErrorMessage(CaptchaConstants.H_CAPTCHA_REQUEST_WRAP_URLS));
+        }
+        CaptchaDataHolder.getInstance().setHCaptchaRequestWrapUrls(hCaptchaRequestWrapUrls);
+
+        try {
+            Double hCaptchaScoreThreshold = getHCaptchaThreshold(properties);
+            CaptchaDataHolder.getInstance().setHCaptchaScoreThreshold(hCaptchaScoreThreshold);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException(getValidationErrorMessage(CaptchaConstants.H_CAPTCHA_SCORE_THRESHOLD));
+        }
+
+        String forcefullyEnableHcaptchaForAllTenants =
+                properties.getProperty(CaptchaConstants.FORCEFULLY_ENABLED_HCAPTCHA_FOR_ALL_TENANTS);
+        CaptchaDataHolder.getInstance().setForcefullyEnabledHcaptchaForAllTenants(
+                Boolean.parseBoolean(forcefullyEnableHcaptchaForAllTenants));
+    }
+
     /**
      * Method to get the threshold value used by reCAPTCHA v3.
      *
@@ -502,7 +649,20 @@ public class CaptchaUtil {
                 log.debug("Error parsing recaptcha.threshold from config. Hence using the default value : " +
                         CaptchaConstants.CAPTCHA_V3_DEFAULT_THRESHOLD);
             }
-           return CaptchaConstants.CAPTCHA_V3_DEFAULT_THRESHOLD;
+            return CaptchaConstants.CAPTCHA_V3_DEFAULT_THRESHOLD;
+        }
+        return Double.parseDouble(threshold);
+    }
+
+    private static double getHCaptchaThreshold(Properties properties) throws NumberFormatException {
+
+        String threshold = properties.getProperty(CaptchaConstants.H_CAPTCHA_SCORE_THRESHOLD);
+        if (StringUtils.isBlank(threshold)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error parsing hcaptcha.threshold from config. Hence using the default value : " +
+                        CaptchaConstants.H_CAPTCHA_DEFAULT_THRESHOLD);
+            }
+            return CaptchaConstants.H_CAPTCHA_DEFAULT_THRESHOLD;
         }
         return Double.parseDouble(threshold);
     }
@@ -581,6 +741,28 @@ public class CaptchaUtil {
         return connectorConfigs;
     }
 
+    public static Property[] getConnectorConfigs_H(ServletRequest servletRequest,
+                                                   IdentityGovernanceService identityGovernanceService,
+                                                   String PROPERTY_ENABLE_HCAPTCHA) throws Exception {
+
+        String tenantDomain = servletRequest.getParameter("tenantDomain");
+        // This is because from swagger def we expect tenant domain as "tenant-domain"
+        if (StringUtils.isEmpty(tenantDomain)) {
+            tenantDomain = servletRequest.getParameter("tenant-domain");
+        }
+        if (StringUtils.isBlank(tenantDomain)) {
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        }
+        if (StringUtils.isBlank(tenantDomain)) {
+            tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+
+        Property[] connectorConfigs = identityGovernanceService.getConfiguration(
+                new String[]{PROPERTY_ENABLE_HCAPTCHA}, tenantDomain);
+
+        return connectorConfigs;
+    }
+
     /**
      * Validate whether the authentication mechanism of the current authenticator is 'basic'.
      *
@@ -606,7 +788,7 @@ public class CaptchaUtil {
      * @return Current authenticator object.
      */
     private static ApplicationAuthenticator getCurrentAuthenticator(AuthenticationContext authenticationContext,
-                                                             String currentAuthenticatorName) {
+                                                                    String currentAuthenticatorName) {
 
         int currentStep = authenticationContext.getCurrentStep();
         SequenceConfig sequenceConfig = authenticationContext.getSequenceConfig();
@@ -661,6 +843,16 @@ public class CaptchaUtil {
     }
 
     /**
+     * Get the HCaptcha Site Key.
+     *
+     * @return HCaptcha Site Key.
+     */
+    public static String hCaptchaSiteKey() {
+
+        return CaptchaDataHolder.getInstance().getHCaptchaSiteKey();
+    }
+
+    /**
      * Get the ReCaptcha API URL.
      *
      * @return ReCaptcha API URL.
@@ -669,6 +861,17 @@ public class CaptchaUtil {
 
         return CaptchaDataHolder.getInstance().getReCaptchaAPIUrl();
     }
+
+    /**
+     * Get the HCaptcha API URL.
+     *
+     * @return HCaptcha API URL.
+     */
+    public static String hCaptchaAPIURL() {
+
+        return CaptchaDataHolder.getInstance().getHCaptchaAPIUrl();
+    }
+
 
     /**
      * Check whether ReCaptcha is enabled.
@@ -681,6 +884,17 @@ public class CaptchaUtil {
     }
 
     /**
+     * Check whether HCaptcha is enabled.
+     *
+     * @return True if HCaptcha is enabled.
+     */
+    public static Boolean isHCaptchaEnabled() {
+
+        return CaptchaDataHolder.getInstance().isHCaptchaEnabled();
+    }
+
+
+    /**
      * Check whether ReCaptcha is enabled for the given flow.
      *
      * @param configName    Name of the configuration.
@@ -688,6 +902,41 @@ public class CaptchaUtil {
      * @return True if ReCaptcha is enabled for the given flow.
      */
     public static Boolean isReCaptchaEnabledForFlow(String configName, String tenantDomain) {
+
+        Property[] connectorConfigs = null;
+        String configValue = null;
+        IdentityGovernanceService identityGovernanceService = CaptchaDataHolder.getInstance()
+                .getIdentityGovernanceService();
+        if (StringUtils.isEmpty(tenantDomain)) {
+            tenantDomain = org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        try {
+            connectorConfigs = identityGovernanceService.getConfiguration(tenantDomain);
+        } catch (IdentityGovernanceException e) {
+            log.error("Error while retrieving resident Idp configurations for tenant: " + tenantDomain, e);
+        }
+        if (connectorConfigs != null && StringUtils.isNotEmpty(configName)) {
+            for (Property connectorConfig : connectorConfigs) {
+                if (configName.equals(connectorConfig.getName())) {
+                    configValue = connectorConfig.getValue();
+                }
+            }
+        } else {
+            log.warn(String.format("Connector configurations are null. Hence return true for %s configuration.",
+                    configName));
+        }
+
+        return !Boolean.FALSE.toString().equalsIgnoreCase(configValue);
+    }
+
+    /**
+     * Check whether HCaptcha is enabled for the given flow.
+     *
+     * @param configName    Name of the configuration.
+     * @param tenantDomain  Tenant Domain.
+     * @return True if HCaptcha is enabled for the given flow.
+     */
+    public static Boolean isHCaptchaEnabledForFlow(String configName, String tenantDomain) {
 
         Property[] connectorConfigs = null;
         String configValue = null;
@@ -746,4 +995,29 @@ public class CaptchaUtil {
         }
         return Boolean.parseBoolean(enable);
     }
+
+    public static boolean isHcaptchaEnabledForConnector(IdentityGovernanceService identityGovernanceService,
+                                                        ServletRequest servletRequest, String propertyName) {
+
+        Property[] connectorConfigs;
+        try {
+            connectorConfigs = CaptchaUtil.getConnectorConfigs_H(servletRequest, identityGovernanceService,
+                    propertyName);
+        } catch (Exception e) {
+            // Can happen due to invalid tenant/ invalid configuration
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to load connector configuration.", e);
+            }
+            return false;
+        }
+
+        String enable = null;
+        for (Property connectorConfig : connectorConfigs) {
+            if ((propertyName).equals(connectorConfig.getName())) {
+                enable = connectorConfig.getValue();
+            }
+        }
+        return Boolean.parseBoolean(enable);
+    }
 }
+

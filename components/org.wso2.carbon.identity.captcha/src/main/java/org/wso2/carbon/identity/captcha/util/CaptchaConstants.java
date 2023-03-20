@@ -52,6 +52,25 @@ public class CaptchaConstants {
 
     public static final String RE_CAPTCHA_SCORE_THRESHOLD = "recaptcha.threshold";
 
+    public static final String H_CAPTCHA_ENABLED = "hcaptcha.enabled";
+
+    public static final String FORCEFULLY_ENABLED_HCAPTCHA_FOR_ALL_TENANTS = "hcaptcha" +
+            ".forcefullyEnabledForAllTenants";
+
+    public static final String H_CAPTCHA_API_URL = "hcaptcha.api.url";
+
+    public static final String H_CAPTCHA_VERIFY_URL = "hcaptcha.verify.url";
+
+    public static final String H_CAPTCHA_SITE_KEY = "hcaptcha.site.key";
+
+    public static final String H_CAPTCHA_SECRET_KEY = "hcaptcha.secret.key";
+
+    public static final String H_CAPTCHA_REQUEST_WRAP_URLS = "hcaptcha.request.wrap.urls";
+
+    public static final String H_CAPTCHA_FAILED_REDIRECT_URLS = "hcaptcha.failed.redirect.urls";
+
+    public static final String H_CAPTCHA_SCORE_THRESHOLD = "hcaptcha.threshold";
+
     public static final String BASIC_AUTHENTICATOR = "BasicAuthenticator";
 
     public static final String BASIC_AUTH_MECHANISM = "basic";
@@ -63,6 +82,9 @@ public class CaptchaConstants {
     // Default value for threshold for score in reCAPTCHA v3.
     public static final double CAPTCHA_V3_DEFAULT_THRESHOLD = 0.5;
 
+    // Default value for threshold for score in hCaptcha.
+    public static final double H_CAPTCHA_DEFAULT_THRESHOLD = 0.5;
+
     /**
      * Captcha Connector configuration constants from the identity.xml.
      */
@@ -71,6 +93,12 @@ public class CaptchaConstants {
         public static final String SSO_LOGIN_RECAPTCHA_ENABLED = "SSOLogin.Recaptcha.Enabled";
         public static final String SSO_LOGIN_RECAPTCHA_ENABLE_ALWAYS = "SSOLogin.Recaptcha.EnableAlways";
         public static final String SSO_LOGIN_RECAPTCHA_MAX_ATTEMPTS = "SSOLogin.Recaptcha.MaxAttempts";
+
+        public static final String SSO_LOGIN_HCAPTCHA_ENABLED = "SSOLogin.Hcaptcha.Enabled";
+
+        public static final String SSO_LOGIN_HCAPTCHA_ENABLE_ALWAYS = "SSOLogin.Hcaptcha.EnableAlways";
+
+        public static final String SSO_LOGIN_HCAPTCHA_MAX_ATTEMPTS = "SSOLogin.Hcaptcha.MaxAttempts";
     }
 
     public static final class ReCaptchaConnectorPropertySuffixes {
@@ -86,6 +114,8 @@ public class CaptchaConstants {
         public static final String USER_IDENTIFIER_ATTRIBUTE = ".user.identifier.attribute";
 
         public static final String RECAPTCHA_VERIFICATION_CLAIM = ".verification.claim";
+
+        public static final String HCAPTCHA_VERIFICATION_CLAIM = ".verification.claim";
 
         public static final String SECURED_DESTINATIONS = ".secured.destinations";
 
@@ -106,3 +136,4 @@ public class CaptchaConstants {
         enableSecurityMechanism.remove();
     }
 }
+

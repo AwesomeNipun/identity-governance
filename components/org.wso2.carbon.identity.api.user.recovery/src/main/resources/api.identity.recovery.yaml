@@ -559,6 +559,117 @@ paths:
         - Password Recovery
         - Username Recovery
 
+
+  /hcaptcha:
+    get:
+      description: |
+        return the hCaptcha information if its supported for the given tenant.
+      x-wso2-request: |
+        curl -X GET -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json"  "https://localhost:9443/api/identity/recovery/v0.9/captcha?tenant-domain=carbon.super&captcha-type=HCaptcha&recovery-type=username-recovery"
+      x-wso2-response: |
+        {"hCaptchaEnabled":true,"hCaptchaKey":"5bdd6179-9ca8-4adb-a177-ea588d5aa385","hCaptchaAPI":"https://hcaptcha.com/siteverify"}
+      operationId: getHCaptcha
+
+      summary: |
+        Get HCaptcha
+
+      parameters:
+        -
+          name: tenant-domain
+          in: query
+          description: tenant domain. Default `carbon.super`
+          required: false
+          type: string
+
+        -
+          name: captcha-type
+          in: query
+          description: type of captcha
+          required: true
+          type: string
+
+        -
+          name: recovery-type
+          in: query
+          description: username recovery or password recovery
+          required: true
+          type: string
+
+      responses:
+        200:
+          description: Successful response
+          schema:
+            $ref: '#/definitions/HCaptchaProperties'
+
+        400:
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/Error'
+
+        500:
+          description: Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Password Recovery
+        - Username Recovery
+
+    post:
+      description: |
+        return true or false after verify the captcha response.
+      x-wso2-request: |
+        curl -X POST -H "Authorization: Basic YWRtaW46YWRtaW4=" -H "Content-Type: application/json" -d '{"token": "xsfwewfcavfrwafrawva"}' "https://localhost:9443/api/identity/recovery/v0.9/captcha?tenant-domain=carbon.super&captcha-type=HCaptcha"
+
+      x-wso2-response: |
+        {"success":true}
+
+      operationId: verifyHCaptcha
+
+      summary: |
+        Verify HCaptcha
+
+      parameters:
+        -
+          name: hCaptcha-response
+          in: body
+          description: hcaptcha response.
+          required: true
+          schema:
+            $ref: '#/definitions/HCaptchaResponseToken'
+
+        -
+          name: tenant-domain
+          in: query
+          description: tenant domain. Default `carbon.super`
+          required: false
+          type: string
+
+        -
+          name: captcha-type
+          in: query
+          description: type of captcha
+          required: true
+          type: string
+
+      responses:
+        200:
+          description: Successful response
+          schema:
+            $ref: '#/definitions/HCaptchaVerificationResponse'
+
+        400:
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/Error'
+
+        500:
+          description: Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Password Recovery
+        - Username Recovery
+
 definitions:
   #-----------------------------------------------------
   # The User Object
@@ -793,6 +904,40 @@ definitions:
       reCaptchaKey:
         type: string
       reCaptchaAPI:
+        type: string
+  #-----------------------------------------------------
+
+  #-----------------------------------------------------
+  # HCaptcha Response Token object
+  #-----------------------------------------------------
+  HCaptchaResponseToken:
+    type: object
+    properties:
+      token:
+        type: string
+  #-----------------------------------------------------
+
+  #-----------------------------------------------------
+  # HCaptcha verification response object
+  #-----------------------------------------------------
+  HCaptchaVerificationResponse:
+    type: object
+    properties:
+      success:
+        type: boolean
+  #-----------------------------------------------------
+
+  #-----------------------------------------------------
+  # HCaptcha Properties object
+  #-----------------------------------------------------
+  HCaptchaProperties:
+    type: object
+    properties:
+      hCaptchaEnabled:
+        type: boolean
+      hCaptchaKey:
+        type: string
+      hCaptchaAPI:
         type: string
 #-----------------------------------------------------
 
